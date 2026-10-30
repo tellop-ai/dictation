@@ -102,6 +102,30 @@ test('contained reads and upsert carry ownership inside their statements', async
   }
 });
 
+test('a save the host refuses this person answers its own words, never "could not save"', async () => {
+  const previous = process.env.TELLOP_INTERNAL_RECORDS;
+  const symbol = Symbol.for('tellop.internalRecordsAction');
+  const original = globalThis[symbol];
+  process.env.TELLOP_INTERNAL_RECORDS = '1';
+  try {
+    for (const [thrown, status, problem] of [['records-forbidden', 403, 'error.cannotChange'],
+      ['records-refused:nested-write', 400, 'error.saveRefused'], ['records-broken', 400, 'error.saveFailed']]) {
+      globalThis[symbol] = async () => { throw new Error(thrown); };
+      const response = await post({ language: 'tr', recognitionMode: 'online' });
+      assert.equal(response.status, status);
+      const answer = await response.json();
+      assert.deepEqual(answer, { problem });
+      // The screen's save keeps those words for the person to read.
+      await assert.rejects(savePreferences({ language: 'tr', recognitionMode: 'online' },
+        async () => new Response(JSON.stringify(answer), { status })), { message: problem });
+    }
+  } finally {
+    if (previous === undefined) delete process.env.TELLOP_INTERNAL_RECORDS; else process.env.TELLOP_INTERNAL_RECORDS = previous;
+    if (original === undefined) delete globalThis[symbol]; else globalThis[symbol] = original;
+  }
+  assert.deepEqual(await readDictationPreferencesFor(OWNER_ID), defaults);
+});
+
 test('a save requires exact confirmation and never mutates the unsaved choices', async () => {
   const values = Object.freeze({ language: 'tr', recognitionMode: 'online' });
   let calls = 0;

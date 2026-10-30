@@ -9,7 +9,11 @@ import { availability, status, show, hide, openAccessibilitySettings } from '../
 import { savePreferences } from '../lib/dictation-preferences.js';
 import { t } from '../lib/i18n/index.js';
 
-export function DictationSettings({ locale, initialPreferences, initialProblem }) {
+/** The words a save may answer with; anything else reads as an unconfirmed save. */
+const SAVE_PROBLEMS = ['error.saveFailed', 'error.saveUnconfirmed', 'error.cannotChange', 'error.saveRefused', 'dictation.invalidPreferences'];
+
+/** `canChange` comes from the page (`lib/dictation-roles.js`): without it the saved choices show with no Save. */
+export function DictationSettings({ locale, initialPreferences, initialProblem, canChange }) {
   const [preferences, setPreferences] = useState(initialPreferences);
   const [saved, setSaved] = useState(initialPreferences);
   const [saveMessage, setSaveMessage] = useState(initialProblem);
@@ -46,7 +50,7 @@ export function DictationSettings({ locale, initialPreferences, initialProblem }
       const confirmed = await savePreferences(preferences);
       if (mounted.current) { setSaved(confirmed); setSaveMessage('dictation.saved'); }
     } catch (error) {
-      if (mounted.current) setSaveMessage(['error.saveFailed', 'error.saveUnconfirmed', 'dictation.invalidPreferences'].includes(error.message) ? error.message : 'error.saveFailed');
+      if (mounted.current) setSaveMessage(SAVE_PROBLEMS.includes(error.message) ? error.message : 'error.saveFailed');
     } finally { if (mounted.current) setSaving(false); }
   }
   async function microphone(kind) {
@@ -105,7 +109,7 @@ export function DictationSettings({ locale, initialPreferences, initialProblem }
         </div>
         {compatible ? <p className="dictation-setup-note">{t(access === 'granted' ? 'dictation.microphoneNote' : 'dictation.settingsNote', locale)}</p> : null}
       </section>
-      <form onSubmit={save} className="dictation-form">
+      {canChange ? <form onSubmit={save} className="dictation-form">
         <div className="dictation-section-heading"><h2>{t('dictation.preferences', locale)}</h2>
           <Button type="submit" variant="ghost" size="sm" disabled={saving || !dirty}>{t(saving ? 'dictation.saving' : 'dictation.save', locale)}</Button>
         </div>
@@ -136,8 +140,18 @@ export function DictationSettings({ locale, initialPreferences, initialProblem }
         <p className="dictation-save-feedback" role="status" aria-live="polite">
           {saveMessage ? t(saveMessage, locale) : dirty ? t('dictation.unsaved', locale) : null}
         </p>
-      </form>
-      <p className="dictation-privacy"><ShieldCheck aria-hidden="true" /><span>{t(`dictation.${mode}Privacy`, locale)}</span></p>
+      </form> : <section className="dictation-form" aria-labelledby="dictation-preferences-title">
+        <div className="dictation-section-heading"><h2 id="dictation-preferences-title">{t('dictation.preferences', locale)}</h2></div>
+        {/* Neutral words only: the owner's form speaks to the person who records ("my speech", "your allowance"). */}
+        <dl>
+          <div className="dictation-language"><dt className="text-[0.8rem]">{t('dictation.view.mode', locale)}</dt>
+            <dd className="text-[0.8rem] font-medium">{t(mode === 'local' ? 'dictation.view.local' : 'dictation.online', locale)}</dd></div>
+          <div className="dictation-language"><dt className="text-[0.8rem]">{t('dictation.view.language', locale)}</dt>
+            <dd className="text-[0.8rem] font-medium">{t(`dictation.${preferences.language}`, locale)}</dd></div>
+        </dl>
+        <p className="dictation-save-feedback mb-5" role="status" aria-live="polite">{t(saveMessage || 'dictation.readOnly', locale)}</p>
+      </section>}
+      {canChange ? <p className="dictation-privacy"><ShieldCheck aria-hidden="true" /><span>{t(`dictation.${mode}Privacy`, locale)}</span></p> : null}
       <Accordion className="dictation-how">
         <AccordionItem value="help"><AccordionTrigger>{t('dictation.howTitle', locale)}</AccordionTrigger>
           <AccordionContent><p>{t('dictation.how', locale)}</p><p>{t('dictation.permissionsHelp', locale)}</p><p>{t('dictation.copyHelp', locale)}</p></AccordionContent>

@@ -22,7 +22,9 @@ export async function POST(request) {
     const preferences = await saveDictationPreferencesFor(OWNER_ID, payload);
     return json({ ok: true, preferences });
   } catch (error) {
-    if (error instanceof DataError) return json({ problem: error.messageKey }, error.messageKey === 'error.saveUnconfirmed' ? 503 : 400);
+    // The host refuses a Viewer's save and a Member's change of the shared row (`error.cannotChange`): its own words, 403.
+    if (error instanceof DataError) return json({ problem: error.messageKey },
+      error.messageKey === 'error.saveUnconfirmed' ? 503 : error.messageKey === 'error.cannotChange' ? 403 : 400);
     return json({ problem: 'error.saveFailed' }, 500);
   }
 }
