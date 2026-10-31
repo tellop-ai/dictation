@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { availability, status, show, hide, openAccessibilitySettings } from '../lib/dictation.js';
+import { practiceAvailability, practiceStatus, practice } from '../lib/dictation-practice.js';
 import { savePreferences } from '../lib/dictation-preferences.js';
 import { t } from '../lib/i18n/index.js';
 
@@ -21,6 +22,7 @@ export function DictationSettings({ locale, initialPreferences, initialProblem, 
   const [checking, setChecking] = useState(true);
   const [host, setHost] = useState(null);
   const [session, setSession] = useState(null);
+  const [practiceState, setPracticeState] = useState(null);
   const [action, setAction] = useState('');
   const [actionProblem, setActionProblem] = useState('');
   const mounted = useRef(false);
@@ -28,8 +30,8 @@ export function DictationSettings({ locale, initialPreferences, initialProblem, 
   const refresh = useCallback(async () => {
     const turn = ++refreshNumber.current;
     setChecking(true);
-    const [available, current] = await Promise.all([availability(), status()]);
-    if (mounted.current && turn === refreshNumber.current) { setHost(available); setSession(current); setChecking(false); }
+    const [available, current, practiceAvailable, currentPractice] = await Promise.all([availability(), status(), practiceAvailability(), practiceStatus()]);
+    if (mounted.current && turn === refreshNumber.current) { setHost(available); setSession(current); setPracticeState({ available: practiceAvailable.ok && practiceAvailable.available === true, active: currentPractice.ok && currentPractice.active === true }); setChecking(false); }
   }, []);
   useEffect(() => {
     mounted.current = true;
@@ -57,6 +59,7 @@ export function DictationSettings({ locale, initialPreferences, initialProblem, 
     setAction(kind); setActionProblem('');
     // Call immediately from this press. No save, read or other await before show.
     const answer = await (kind === 'settings' ? openAccessibilitySettings() :
+      kind === 'practice' ? practice({ language: preferences.language, mode: preferences.recognitionMode }) :
       kind === 'show' ? show({ language: preferences.language, mode: preferences.recognitionMode }) : hide());
     if (!mounted.current) return;
     if (!answer.ok) setActionProblem(`dictation.${answer.reason ?? 'failed'}`);
@@ -74,7 +77,7 @@ export function DictationSettings({ locale, initialPreferences, initialProblem, 
   const title = checking ? 'checking' : ready ? 'setupReady' : compatible ? 'setupNeeded' : 'setupUnavailable';
   const statusKey = actionProblem || (reason ? `dictation.${reason}` :
     canShow && mode === 'local' && session.readiness !== 'ready' ? 'dictation.offlineSetupDetail' :
-    session?.visible ? `dictation.${session.state}` : ready ? 'dictation.readyDetail' : 'dictation.setupDetail');
+    practiceState?.active ? 'dictation.practiceOpen' : session?.visible ? `dictation.${session.state}` : ready ? 'dictation.readyDetail' : 'dictation.setupDetail');
   return (
     <>
       <section className="dictation-setup" aria-labelledby="dictation-setup-title" aria-busy={checking} data-ready={ready && !checking}>
@@ -100,6 +103,9 @@ export function DictationSettings({ locale, initialPreferences, initialProblem, 
           </Button> : <Button type="button" disabled={working || checking || !canShow} onClick={() => void microphone('show')}>
             <Mic aria-hidden="true" />{t(action === 'show' ? 'dictation.showing' : canShow && !ready ? 'dictation.prepareOffline' : 'dictation.show', locale)}
           </Button>}
+          {compatible && practiceState?.available === true ? <Button type="button" variant="outline" disabled={working || checking} onClick={() => void microphone('practice')}>
+            {t('dictation.testMicrophone', locale)}
+          </Button> : null}
           {session?.visible === true ? <Button type="button" variant="outline" disabled={working} onClick={() => void microphone('hide')}>
             <X aria-hidden="true" />{t(action === 'hide' ? 'dictation.hiding' : 'dictation.hide', locale)}
           </Button> : null}

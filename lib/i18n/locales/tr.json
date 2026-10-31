@@ -169,5 +169,7 @@
   "dictation.accessibility": "Erişilebilirlik erişimi gerekiyor. Ayarları aç, ardından yeniden kontrol et.",
   "dictation.privacyTitle": "Gizlilik ve pano",
   "dictation.offlineSetupDetail": "Çevrimdışı ses dosyalarını indirmek veya yeniden denemek için mikrofonu göster.",
-  "dictation.prepareOffline": "Çevrimdışı dikteyi hazırla"
+  "dictation.prepareOffline": "Çevrimdışı dikteyi hazırla",
+  "dictation.testMicrophone": "Mikrofonu dene",
+  "dictation.practiceOpen": "Mikrofon denemesi açık. Küçük denetim penceresinde kısa bir cümle kaydet."
 }

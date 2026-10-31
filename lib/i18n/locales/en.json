@@ -169,5 +169,7 @@
   "dictation.accessibility": "Accessibility access is needed. Open settings, then check again.",
   "dictation.privacyTitle": "Privacy and your clipboard",
   "dictation.offlineSetupDetail": "Show the microphone to download or retry the offline voice files.",
-  "dictation.prepareOffline": "Set up offline dictation"
+  "dictation.prepareOffline": "Set up offline dictation",
+  "dictation.testMicrophone": "Test microphone",
+  "dictation.practiceOpen": "The microphone test is open. Record a short phrase in the floating control."
 }
